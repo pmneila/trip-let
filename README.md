@@ -59,3 +59,5 @@ Still many things to polish:
 * Add help strings for the arguments of argparse
 
 * Write a brief manual
+
+* A GUI?

@@ -48,8 +48,7 @@ def build_trip_let_volume(
     proj0 = proj0.astype(np.bool_)
     proj1 = proj1.astype(np.bool_)
     proj2 = proj2.astype(np.bool_)
-    vol = np.logical_and(proj2[:, :, None], proj1[:, None, :])
-    vol = np.logical_and(vol, proj0[None, :, :])
+    vol = proj0[None, :, :] & proj1[:, None, :] & proj2[:, :, None]
     return vol
 
 
@@ -58,8 +57,7 @@ def find_mistakes(
         projs: Iterable[np.ndarray]
         ) -> List[np.ndarray]:
 
-    return [np.any(volume, axis=i) != proj_i
-            for i, proj_i in enumerate(projs)]
+    return [np.any(volume, axis=i) != proj_i for i, proj_i in enumerate(projs)]
 
 
 def transform_and_build_volume(
@@ -71,6 +69,41 @@ def transform_and_build_volume(
     volume = build_trip_let_volume(*images)
     mistakes = find_mistakes(volume, images)
     return volume, mistakes, transforms
+
+
+def find_best_transform(
+        projs: Iterable[np.ndarray]
+        ) -> Tuple[np.ndarray, List[np.ndarray], Iterable[Transformation]]:
+    """
+    Iterate over all possible transformations and pick the one that minimizes
+    the number of mistakes.
+    """
+
+    all_transforms3 = product(all_transformations(), repeat=3)
+    all_transforms3 = tqdm(list(all_transforms3))
+
+    return min(
+        (transform_and_build_volume(t, projs) for t in all_transforms3),
+        # key function counts the number of mistakes
+        key=lambda x: sum(np.sum(i) for i in x[1])
+    )
+
+
+def smooth(volume: np.ndarray, mode: str) -> Tuple[np.ndarray, float]:
+
+    isovalue = 0.0
+    if mode == 'auto':
+        volume = mcubes.smooth(volume)
+    elif mode == 'constrained':
+        volume = mcubes.smooth_constrained(volume, max_iters=500)
+    elif mode == 'gaussian':
+        volume = mcubes.smooth_gaussian(volume)
+    elif mode == 'no':
+        isovalue = 0.5
+    else:
+        raise ValueError("unknown mode '{}'".format(mode))
+
+    return volume, isovalue
 
 
 def imread_nochannels(filename: str) -> np.ndarray:
@@ -135,34 +168,16 @@ def main():
         logging.info("Building trip-let volume...")
         volume, mistakes, _ = transform_and_build_volume(transforms, images)
     else:
-        # Iterate over all possible transformations and pick the one that
-        # minimizes the number of mistakes.
         logging.info("Finding the best transformation...")
-
-        all_transforms3 = product(all_transformations(), repeat=3)
-        all_transforms3 = tqdm(list(all_transforms3))
-
-        volume, mistakes, best_transformation = min(
-            (transform_and_build_volume(t, images) for t in all_transforms3),
-            # key function counts the number of mistakes
-            key=lambda x: sum(np.sum(i) for i in x[1])
-        )
-
+        volume, mistakes, best_transformation = find_best_transform(images)
         logging.info("Best transformation: %s", best_transformation)
 
-    logging.info("%d unmet constraints found",
-                 sum(np.sum(i) for i in mistakes))
+    num_mistakes = sum(np.sum(i) for i in mistakes)
+    if num_mistakes > 0:
+        logging.warning("%d reprojection errors", num_mistakes)
 
     # Smoothing
-    isovalue = 0.0
-    if args.smoothing == 'auto':
-        volume = mcubes.smooth(volume)
-    elif args.smoothing == 'constrained':
-        volume = mcubes.smooth_constrained(volume, max_iters=500)
-    elif args.smoothing == 'gaussian':
-        volume = mcubes.smooth_gaussian(volume)
-    else:
-        isovalue = 0.5
+    volume, isovalue = smooth(volume, args.smoothing)
 
     # Marching cubes
     logging.info("Marching cubes...")

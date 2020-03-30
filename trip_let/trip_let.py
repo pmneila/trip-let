@@ -58,10 +58,8 @@ def find_mistakes(
         projs: Iterable[np.ndarray]
         ) -> List[np.ndarray]:
 
-    mistakes = [np.any(volume, axis=i) != proj_i
-                for i, proj_i in enumerate(projs)]
-
-    return mistakes
+    return [np.any(volume, axis=i) != proj_i
+            for i, proj_i in enumerate(projs)]
 
 
 def transform_and_build_volume(

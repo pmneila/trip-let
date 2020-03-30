@@ -47,3 +47,15 @@ Uninstall with
 ```sh
 pip uninstall trip-let
 ```
+
+## TO DO
+
+Still many things to polish:
+
+* Proper handling and error checking of sizes of input images
+
+* Add the option of saving reprojection errors for debugging
+
+* Add help strings for the arguments of argparse
+
+* Write a brief manual

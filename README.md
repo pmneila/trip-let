@@ -27,7 +27,7 @@ trip-let -x data/B.png -y data/E.png -z data/G.png -o BEG.obj --find-best-transf
 trip-let -x data/square.png -y data/circle.png -z data/triangle.png -o trisquarcle.obj --find-best-transform
 ```
 
-![Trisquarcle](images/trisquarcle256.jpg "A cork plug")
+![Trisquarcle](images/example2.png "A cork plug")
 
 ## Installation
 

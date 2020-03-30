@@ -26,10 +26,10 @@ trip-let -x data/B.png -y data/E.png -z data/G.png -o BEG.obj --find-best-transf
 git clone https://github.com/pmneila/trip-let.git
 
 # Install requirements (PyMCubes)
+cd trip-let
 pip install -r requirements.txt
 
-# Install
-cd trip-let
+# Install trip-let
 python setup.py install
 ```
 
